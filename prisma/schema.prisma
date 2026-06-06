@@ -1,0 +1,127 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  password      String?
+  role          Role      @default(ATTENDEE)
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  organizerEvents Event[]
+  bookings      Booking[]
+  reviews       Review[]
+  organizerApplication OrganizerApplication?
+}
+
+model OrganizerApplication {
+  id               String            @id @default(cuid())
+  userId           String            @unique
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fullName         String
+  organizationName String
+  phoneNumber      String
+  websiteOrSocial  String
+  eventDescription String
+  status           ApplicationStatus @default(PENDING)
+  adminNote        String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+}
+
+model Event {
+  id          String      @id @default(cuid())
+  title       String
+  description String
+  startDate   DateTime
+  endDate     DateTime
+  location    String
+  latitude    Float?
+  longitude   Float?
+  image       String?
+  category    String
+  status      EventStatus @default(DRAFT)
+  organizerId String
+  organizer   User        @relation(fields: [organizerId], references: [id])
+  ticketTypes TicketType[]
+  bookings    Booking[]
+  reviews     Review[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model TicketType {
+  id       String   @id @default(cuid())
+  name     String
+  price    Int
+  quantity Int
+  sold     Int      @default(0)
+  eventId  String
+  event    Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  bookings Booking[]
+}
+
+model Booking {
+  id           String        @id @default(cuid())
+  userId       String
+  user         User          @relation(fields: [userId], references: [id])
+  eventId      String
+  event        Event         @relation(fields: [eventId], references: [id])
+  ticketTypeId String
+  ticketType   TicketType    @relation(fields: [ticketTypeId], references: [id])
+  quantity     Int
+  totalAmount  Int
+  platformFee  Int           @default(0)
+  currency     String        @default("ETB")
+  txRef        String?       @unique
+  status       BookingStatus @default(PENDING)
+  qrCode       String?
+  ticketPdfUrl String?
+  createdAt    DateTime      @default(now())
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  rating    Int
+  comment   String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+enum Role {
+  ADMIN
+  ORGANIZER
+  ATTENDEE
+}
+
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+  ONGOING
+  COMPLETED
+  CANCELLED
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  REFUNDED
+}
+
+enum ApplicationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
